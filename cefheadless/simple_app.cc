@@ -79,6 +79,20 @@ class SimpleBrowserViewDelegate : public CefBrowserViewDelegate {
 
 }  // namespace
 #endif
+class HeadlessRenderHandler : public CefRenderHandler {
+public:
+  HeadlessRenderHandler() {}
+
+  void GetViewRect(CefRefPtr<CefBrowser> browser, CefRect& rect) override {
+    rect = CefRect(0, 0, browser->GetHost()->GetWindowlessFrameRate(), browser->GetHost()->GetWindowlessFrameRate());
+  }
+
+  void OnPaint(CefRefPtr<CefBrowser> browser, PaintElementType type, const RectList& dirtyRects, const void* buffer, int width, int height) override {
+    // Handle the painted buffer here
+  }
+
+  IMPLEMENT_REFCOUNTING(HeadlessRenderHandler);
+};
 
 HeadlessApp::HeadlessApp() {}
 
@@ -136,6 +150,10 @@ void HeadlessApp::OnContextInitialized() {
 
     if (!with_window) {
 		window_info.SetAsWindowless(0); 
+		//CefRefPtr<HeadlessRenderHandler> render_handler = new HeadlessRenderHandler();
+		//CefRefPtr<CefBrowser> browser = CefBrowserHost::CreateBrowserSync(window_info, 
+		//		render_handler.get(), url, browser_settings, nullptr);
+		//return;
     }
      
     // Create the first browser window.

@@ -5,25 +5,36 @@
 
 #include "include/cef_browser.h"
 
-class HeadlessBrowser  
-{
+class HeadlessBrowser : public CefBaseRefCounted {
  
-	public:
-		explicit HeadlessBrowser(const CefRefPtr<CefBrowser>& browser);
-		~HeadlessBrowser();
+public:
+	explicit HeadlessBrowser(const CefRefPtr<CefBrowser>& browser);
+	~HeadlessBrowser();
 
-		auto IsSame(CefRefPtr<CefBrowser> browser)
-		{
-			return _browser->IsSame(browser);
-		}
+	auto IsSame(CefRefPtr<CefBrowser> browser) {
+		return _browser->IsSame(browser);
+	}
 
-		auto GetHost() const
-		{
-			return _browser->GetHost();
-		}
+	auto GetHost() const {
+		return _browser->GetHost();
+	}
 
-	private:
-		CefRefPtr<CefBrowser> _browser;
+	auto get_namefifo() const {
+		return namefifo;
+	}
+
+	void write(const std::string& text);
+
+private:
+	CefRefPtr<CefBrowser> _browser;
+
+	std::string namefifo;
+
+	int output, input;
+
+private:
+	IMPLEMENT_REFCOUNTING(HeadlessBrowser);
+
 };
 
 #endif  // HEADLESS_BROWSER_H_

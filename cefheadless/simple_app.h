@@ -19,6 +19,7 @@ class HeadlessApp : public CefApp, public CefBrowserProcessHandler {
 
   // CefBrowserProcessHandler methods:
   void OnContextInitialized() override;
+
   CefRefPtr<CefClient> GetDefaultClient() override;
 
  private:

@@ -10,8 +10,13 @@
 
 include_directories(${PROJECT_SOURCE_DIR})
 
+find_package(PkgConfig REQUIRED)
+
+pkg_check_modules(FUSE fuse3)
+
 # cefsimple sources.
 set(CEFHEADLESS_SRCS
+  fuse.cc
   simple_app.cc
   simple_app.h
   simple_handler.cc
@@ -95,7 +100,11 @@ if(OS_LINUX)
   add_executable(${CEF_TARGET} ${CEFHEADLESS_SRCS})
   SET_EXECUTABLE_TARGET_PROPERTIES(${CEF_TARGET})
   add_dependencies(${CEF_TARGET} libcef_dll_wrapper)
-  target_link_libraries(${CEF_TARGET} libcef_lib libcef_dll_wrapper ${CEF_STANDARD_LIBS})
+  target_link_libraries(${CEF_TARGET} libcef_lib libcef_dll_wrapper ${CEF_STANDARD_LIBS} )
+
+  target_include_directories(${CEF_TARGET} PUBLIC ${FUSE_INCLUDE_DIRS})
+  target_link_libraries(${CEF_TARGET} ${FUSE_LIBRARIES})
+
 
   # Set rpath so that libraries can be placed next to the executable.
   set_target_properties(${CEF_TARGET} PROPERTIES INSTALL_RPATH "$ORIGIN")

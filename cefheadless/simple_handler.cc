@@ -8,6 +8,7 @@
 #include <sstream>
 #include <string>
 #include <iostream>
+#include <algorithm>
 
 #include "include/base/cef_callback.h"
 #include "include/cef_app.h"
@@ -16,6 +17,26 @@
 #include "include/views/cef_window.h"
 #include "include/wrapper/cef_closure_task.h"
 #include "include/wrapper/cef_helpers.h"
+
+class FrameVisitor : public CefStringVisitor {
+public:
+	FrameVisitor(const CefRefPtr<HeadlessBrowser>& headless_browser) :
+		_headless_browser(headless_browser)
+	{
+	}
+
+
+	void Visit(const CefString& html) override {
+		auto page_html = html.ToString();
+		_headless_browser->write(page_html);
+	}
+
+private:
+	CefRefPtr<HeadlessBrowser> _headless_browser;
+
+private:
+  IMPLEMENT_REFCOUNTING(FrameVisitor);
+};
 
 //namespace {
 
@@ -58,8 +79,9 @@ void HeadlessClient::OnTitleChange(CefRefPtr<CefBrowser> browser,
 void HeadlessClient::OnAfterCreated(CefRefPtr<CefBrowser> browser) {
   CEF_REQUIRE_UI_THREAD();
 
+  CefRefPtr<HeadlessBrowser> headless_browser = new HeadlessBrowser(browser);
   // Add to the list of existing browsers.
-  browser_list_.push_back(HeadlessBrowser(browser));
+  browser_list_.push_back(headless_browser);
 }
 
 bool HeadlessClient::DoClose(CefRefPtr<CefBrowser> browser) {
@@ -84,7 +106,7 @@ void HeadlessClient::OnBeforeClose(CefRefPtr<CefBrowser> browser) {
   // Remove from the list of existing browsers.
   BrowserList::iterator bit = browser_list_.begin();
   for (; bit != browser_list_.end(); ++bit) {
-    if ((*bit).IsSame(browser)) {
+    if ((*bit)->IsSame(browser)) {
       browser_list_.erase(bit);
       break;
     }
@@ -126,6 +148,30 @@ void HeadlessClient::OnLoadEnd(CefRefPtr<CefBrowser> browser,
 							   CefRefPtr<CefFrame> frame,
 							   int httpStatusCode) {
 	std::cerr << "OnLoadEnd" << std::endl;
+
+    //CefPostTask(TID_UI, base::BindOnce(&HeadlessClient::CloseAllBrowsers, this,
+    //                                   force_close));
+
+	auto it = std::find_if(browser_list_.begin(), browser_list_.end(), [browser](auto headless_browser) {
+			return headless_browser->IsSame(browser);
+		});
+
+	
+	if(it != browser_list_.end()) {
+	
+		CefRefPtr<FrameVisitor> visitor = new FrameVisitor(*it);
+		frame->GetSource(visitor);
+	}
+
+	/*
+	while(on_visit)
+	{
+		usleep(1000);
+		std::cout << "on_visit" << std::endl;
+		CefDoMessageLoopWork();
+	}
+	*/
+
 }
 
 void HeadlessClient::OnLoadStart(CefRefPtr<CefBrowser> browser,
@@ -148,8 +194,26 @@ void HeadlessClient::CloseAllBrowsers(bool force_close) {
 
   BrowserList::const_iterator it = browser_list_.begin();
   for (; it != browser_list_.end(); ++it)
-    it->GetHost()->CloseBrowser(force_close);
+    (*it)->GetHost()->CloseBrowser(force_close);
 }
+
+/*
+void HeadlessClient::VisitDom(bool force_close) {
+  if (!CefCurrentlyOn(TID_UI)) {
+    // Execute on the UI thread.
+    CefPostTask(TID_UI, base::BindOnce(&HeadlessClient::CloseAllBrowsers, this,
+                                       force_close));
+    return;
+  }
+
+  if (browser_list_.empty())
+    return;
+
+  BrowserList::const_iterator it = browser_list_.begin();
+  for (; it != browser_list_.end(); ++it)
+    (*it)->GetHost()->CloseBrowser(force_close);
+}
+*/
 
 // static
 bool HeadlessClient::IsChromeRuntimeEnabled() {
@@ -161,3 +225,16 @@ bool HeadlessClient::IsChromeRuntimeEnabled() {
   }
   return value == 1;
 }
+
+void HeadlessClient::GetViewRect(CefRefPtr<CefBrowser> browser,CefRect &rect) {
+//CefRect(0, 0, browser->GetHost()->GetWindowlessFrameRate(), browser->GetHost()->GetWindowlessFrameRate());
+	rect = CefRect(0, 0, browser->GetHost()->GetWindowlessFrameRate(), browser->GetHost()->GetWindowlessFrameRate());
+}
+
+void HeadlessClient::OnPaint (CefRefPtr< CefBrowser > browser, PaintElementType type, 
+		const RectList &dirtyRects, const void *buffer, int width, int height) {
+
+}
+
+
+
