@@ -18,9 +18,8 @@
  * \include cefheadless_ll.c
  */
 
-#define FUSE_USE_VERSION 34
+#include <string>
 
-#include <fuse_lowlevel.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,6 +27,11 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <assert.h>
+
+#define FUSE_USE_VERSION 34
+#include <fuse_lowlevel.h>
+
+#include "headless_fuse.h"
 
 static const char *hello_str = "Hello World!\n";
 static const char *hello_name = "hello";
@@ -202,7 +206,7 @@ static void cefheadless_ll_removexattr(fuse_req_t req, fuse_ino_t ino, const cha
 	}
 }
 
-static const struct fuse_lowlevel_ops cefheadless_ll_oper = {
+static const struct fuse_lowlevel_ops  = {
 	.lookup = cefheadless_ll_lookup,
 	.getattr = cefheadless_ll_getattr,
 	.open = cefheadless_ll_open,
@@ -213,6 +217,7 @@ static const struct fuse_lowlevel_ops cefheadless_ll_oper = {
 	.removexattr = cefheadless_ll_removexattr,
 };
 
+#if 0
 int fuse_main(int argc, char *argv[])
 {
 	struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
@@ -276,4 +281,87 @@ err_out1:
 
 	return ret ? 1 : 0;
 }
+#endif
+
+HeadlessFuse::HeadlessFuse(const int argc, const char *argv[])
+{
+	using namespace std::string_literals;
+
+	args = FUSE_ARGS_INIT(argc, argv);
+
+	if (fuse_parse_cmdline(&args, &opts) != 0) {
+		throw std::string("Bad command line");
+	}
+
+	if (opts.show_help) {
+		fuse_cmdline_help();
+		fuse_lowlevel_help();
+		fuse_opt_free_args(&args);
+		throw std::string("usage: [options] <mountpoint>");
+	}
+
+	if (opts.show_version) {
+		fuse_lowlevel_version();
+		fuse_opt_free_args(&args);
+		std:::string version = fuse_pkgversion;
+		throw std::string("FUSE library version "s  + version);
+	}
+
+	if(opts.mountpoint == NULL) {
+		fuse_opt_free_args(&args);
+		throw std::string("Missing <mountpoint>");
+	}
+
+	se = fuse_session_new(&args, &cefheadless_ll_oper,
+			      sizeof(cefheadless_ll_oper), NULL);
+
+	if (se == NULL) {
+		fuse_opt_free_args(&args);
+		throw std::string("Error session fuse");
+	}
+
+	if (fuse_set_signal_handlers(se) != 0) {
+	    fuse_opt_free_args(&args);
+		throw std::string("Error setting signal handler");
+	}
+
+	if (fuse_session_mount(se, opts.mountpoint) != 0) {
+	    fuse_opt_free_args(&args);
+		throw std::string("Error mounting point");
+	}
+
+	fuse_daemonize(opts.foreground);
+
+	int ret = 0;
+
+	/* Block until ctrl+c or fusermount -u */
+	if (opts.singlethread) {
+		ret = fuse_session_loop(se);
+	}
+	else {
+		config.clone_fd = opts.clone_fd;
+		config.max_idle_threads = opts.max_idle_threads;
+		ret = fuse_session_loop_mt(se, &config);
+	}
+
+	if(ret != 0)
+	{
+	    fuse_opt_free_args(&args);
+		throw std::string("");
+	}
+}
+
+HeadlessFuse::~HeadlessFuse() {
+	
+	fuse_session_unmount(se);
+
+	fuse_remove_signal_handlers(se);
+
+	fuse_session_destroy(se);
+
+	free(opts.mountpoint);
+
+	fuse_opt_free_args(&args);
+}
+
 

@@ -16,7 +16,8 @@ pkg_check_modules(FUSE fuse3)
 
 # cefsimple sources.
 set(CEFHEADLESS_SRCS
-  fuse.cc
+  headless_fuse.cc
+  headless_fuse.h
   simple_app.cc
   simple_app.h
   simple_handler.cc
