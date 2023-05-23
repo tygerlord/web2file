@@ -51,14 +51,24 @@ std::string GetDataURI(const std::string& data, const std::string& mime_type) {
 
 //}  // namespace
 
-HeadlessClient::HeadlessClient()
-    : is_closing_(false) {
-  DCHECK(!g_instance);
-  g_instance = this;
+HeadlessClient::HeadlessClient() : 
+	is_closing_(false) {
+	DCHECK(!g_instance);
+	g_instance = this;
+
+
+	int argc = 2;
+	char *argv[argc] = {
+		const_cast<char*>("web2file"),
+		const_cast<char*>("_web2file"),
+	};
+
+	_headless_fuse.start(argc, argv);
 }
 
 HeadlessClient::~HeadlessClient() {
   g_instance = nullptr;
+//  _headless_fuse.close();
 }
 
 // static
@@ -113,10 +123,13 @@ void HeadlessClient::OnBeforeClose(CefRefPtr<CefBrowser> browser) {
   }
 
 
-  if (browser_list_.empty()) {
-    // All browser windows have closed. Quit the application message loop.
-    CefQuitMessageLoop();
-  }
+	if (browser_list_.empty()) {
+
+		_headless_fuse.close();
+
+		// All browser windows have closed. Quit the application message loop.
+		CefQuitMessageLoop();
+	}
 }
 
 void HeadlessClient::OnLoadError(CefRefPtr<CefBrowser> browser,
@@ -175,8 +188,8 @@ void HeadlessClient::OnLoadEnd(CefRefPtr<CefBrowser> browser,
 }
 
 void HeadlessClient::OnLoadStart(CefRefPtr<CefBrowser> browser,
-				        		 CefRefPtr<CefFrame> frame,
-						         CefLoadHandler::TransitionType transition_type) {
+								 CefRefPtr<CefFrame> frame,
+								 CefLoadHandler::TransitionType transition_type) {
 	std::cerr << "OnLoadStart" << " " << transition_type << std::endl;
 }
 

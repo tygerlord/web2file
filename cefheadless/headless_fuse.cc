@@ -19,6 +19,7 @@
  */
 
 #include <string>
+#include <queue>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,8 +34,16 @@
 
 #include "headless_fuse.h"
 
+static struct fuse_args args;
+static struct fuse_session *se;
+static struct fuse_cmdline_opts opts;
+static struct fuse_loop_config config;
+
+static std::queue<std::string> input;
+static std::queue<std::string> output;
+
 static const char *hello_str = "Hello World!\n";
-static const char *hello_name = "hello";
+static const char *cefheadless_name = "browse.w2f";
 
 static int hello_stat(fuse_ino_t ino, struct stat *stbuf)
 {
@@ -75,7 +84,7 @@ static void cefheadless_ll_lookup(fuse_req_t req, fuse_ino_t parent, const char 
 {
 	struct fuse_entry_param e;
 
-	if (parent != 1 || strcmp(name, hello_name) != 0)
+	if (parent != 1 || strcmp(name, cefheadless_name) != 0)
 		fuse_reply_err(req, ENOENT);
 	else {
 		memset(&e, 0, sizeof(e));
@@ -132,7 +141,7 @@ static void cefheadless_ll_readdir(fuse_req_t req, fuse_ino_t ino, size_t size,
 		memset(&b, 0, sizeof(b));
 		dirbuf_add(req, &b, ".", 1);
 		dirbuf_add(req, &b, "..", 1);
-		dirbuf_add(req, &b, hello_name, 2);
+		dirbuf_add(req, &b, cefheadless_name, 2);
 		reply_buf_limited(req, b.p, b.size, off, size);
 		free(b.p);
 	}
@@ -156,6 +165,18 @@ static void cefheadless_ll_read(fuse_req_t req, fuse_ino_t ino, size_t size,
 
 	assert(ino == 2);
 	reply_buf_limited(req, hello_str, strlen(hello_str), off, size);
+}
+
+static void cefheadless_ll_write(fuse_req_t req, fuse_ino_t ino, const char *buf,
+		size_t size, off_t off, struct fuse_file_info *fi)
+{
+	(void) fi;
+
+	assert(ino == 2);
+
+	fuse_reply_write(req, size);
+
+	input.emplace(std::string(buf, size));
 }
 
 static void cefheadless_ll_getxattr(fuse_req_t req, fuse_ino_t ino, const char *name,
@@ -206,18 +227,18 @@ static void cefheadless_ll_removexattr(fuse_req_t req, fuse_ino_t ino, const cha
 	}
 }
 
-static const struct fuse_lowlevel_ops  = {
+static const struct fuse_lowlevel_ops cefheadless_ll_oper = {
 	.lookup = cefheadless_ll_lookup,
 	.getattr = cefheadless_ll_getattr,
 	.open = cefheadless_ll_open,
 	.read = cefheadless_ll_read,
+	.write = cefheadless_ll_write,
 	.readdir = cefheadless_ll_readdir,
 	.setxattr = cefheadless_ll_setxattr,
 	.getxattr = cefheadless_ll_getxattr,
 	.removexattr = cefheadless_ll_removexattr,
 };
 
-#if 0
 int fuse_main(int argc, char *argv[])
 {
 	struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
@@ -259,7 +280,7 @@ int fuse_main(int argc, char *argv[])
 	if (fuse_session_mount(se, opts.mountpoint) != 0)
 	    goto err_out3;
 
-	fuse_daemonize(opts.foreground);
+	//fuse_daemonize(opts.foreground);
 
 	/* Block until ctrl+c or fusermount -u */
 	if (opts.singlethread)
@@ -281,13 +302,23 @@ err_out1:
 
 	return ret ? 1 : 0;
 }
-#endif
 
-HeadlessFuse::HeadlessFuse(const int argc, const char *argv[])
-{
+#if 0
+HeadlessFuse::HeadlessFuse() :
+	se(nullptr) {
+
+}
+
+void HeadlessFuse::start(int argc, char *argv[]) {
+
 	using namespace std::string_literals;
 
+	close();
+
 	args = FUSE_ARGS_INIT(argc, argv);
+	args.argc = argc;
+	args.argv = argv;
+	args.allocated = 0;
 
 	if (fuse_parse_cmdline(&args, &opts) != 0) {
 		throw std::string("Bad command line");
@@ -303,7 +334,7 @@ HeadlessFuse::HeadlessFuse(const int argc, const char *argv[])
 	if (opts.show_version) {
 		fuse_lowlevel_version();
 		fuse_opt_free_args(&args);
-		std:::string version = fuse_pkgversion;
+		std::string version = fuse_pkgversion();
 		throw std::string("FUSE library version "s  + version);
 	}
 
@@ -330,38 +361,55 @@ HeadlessFuse::HeadlessFuse(const int argc, const char *argv[])
 		throw std::string("Error mounting point");
 	}
 
-	fuse_daemonize(opts.foreground);
+	//fuse_daemonize(opts.foreground);
 
-	int ret = 0;
-
+	//int ret = 0;
+	
 	/* Block until ctrl+c or fusermount -u */
 	if (opts.singlethread) {
-		ret = fuse_session_loop(se);
+		//ret = fuse_session_loop(se);
+		fuse_session_loop(se);
 	}
 	else {
 		config.clone_fd = opts.clone_fd;
 		config.max_idle_threads = opts.max_idle_threads;
-		ret = fuse_session_loop_mt(se, &config);
+		//ret = fuse_session_loop_mt(se, &config);
+		fuse_session_loop_mt(se, &config);
 	}
 
+
+	/*
 	if(ret != 0)
 	{
 	    fuse_opt_free_args(&args);
 		throw std::string("");
 	}
+	*/
 }
 
 HeadlessFuse::~HeadlessFuse() {
-	
-	fuse_session_unmount(se);
-
-	fuse_remove_signal_handlers(se);
-
-	fuse_session_destroy(se);
-
-	free(opts.mountpoint);
-
-	fuse_opt_free_args(&args);
+	close();
+	//fuse_loop.join();
 }
 
+void HeadlessFuse::exit() {
+	fuse_session_exit(se);
+}
+
+void HeadlessFuse::close() {
+	if(se != nullptr) {
+		fuse_session_unmount(se);
+
+		fuse_remove_signal_handlers(se);
+
+		fuse_session_destroy(se);
+
+		free(opts.mountpoint);
+
+		fuse_opt_free_args(&args);
+
+		se = nullptr;
+	}
+}
+#endif
 

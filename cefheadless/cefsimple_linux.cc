@@ -10,6 +10,7 @@
 
 #include "include/base/cef_logging.h"
 #include "include/cef_command_line.h"
+#include "include/cev_thread.h"
 
 #if defined(CEF_X11)
 namespace {
@@ -34,58 +35,61 @@ int XIOErrorHandlerImpl(Display* display) {
 
 // Entry point function for all processes.
 int main(int argc, char* argv[]) {
-  // Provide CEF with command-line arguments.
-  CefMainArgs main_args(argc, argv);
+	// Provide CEF with command-line arguments.
+	CefMainArgs main_args(argc, argv);
 
-  // CEF applications have multiple sub-processes (render, GPU, etc) that share
-  // the same executable. This function checks the command-line and, if this is
-  // a sub-process, executes the appropriate logic.
-  int exit_code = CefExecuteProcess(main_args, nullptr, nullptr);
-  if (exit_code >= 0) {
-    // The sub-process has completed so return here.
-    return exit_code;
-  }
+	// CEF applications have multiple sub-processes (render, GPU, etc) that share
+	// the same executable. This function checks the command-line and, if this is
+	// a sub-process, executes the appropriate logic.
+	int exit_code = CefExecuteProcess(main_args, nullptr, nullptr);
+	if (exit_code >= 0) {
+		// The sub-process has completed so return here.
+		return exit_code;
+	}
 
 #if defined(CEF_X11)
-  // Install xlib error handlers so that the application won't be terminated
-  // on non-fatal errors.
-  XSetErrorHandler(XErrorHandlerImpl);
-  XSetIOErrorHandler(XIOErrorHandlerImpl);
+	// Install xlib error handlers so that the application won't be terminated
+	// on non-fatal errors.
+	XSetErrorHandler(XErrorHandlerImpl);
+	XSetIOErrorHandler(XIOErrorHandlerImpl);
 #endif
 
-  // Parse command-line arguments for use in this method.
-  CefRefPtr<CefCommandLine> command_line = CefCommandLine::CreateCommandLine();
-  command_line->InitFromArgv(argc, argv);
+	// Parse command-line arguments for use in this method.
+	CefRefPtr<CefCommandLine> command_line = CefCommandLine::CreateCommandLine();
+	command_line->InitFromArgv(argc, argv);
 
-  // Specify CEF global settings here.
-  CefSettings settings;
+	// Specify CEF global settings here.
+	CefSettings settings;
 
-  if (command_line->HasSwitch("enable-chrome-runtime")) {
-    // Enable experimental Chrome runtime. See issue #2969 for details.
-    settings.chrome_runtime = true;
-  }
- 
-// When generating projects with CMake the CEF_USE_SANDBOX value will be defined
-// automatically. Pass -DUSE_SANDBOX=OFF to the CMake command-line to disable
-// use of the sandbox.
+	if (command_line->HasSwitch("enable-chrome-runtime")) {
+	// Enable experimental Chrome runtime. See issue #2969 for details.
+		settings.chrome_runtime = true;
+	}
+
+	// When generating projects with CMake the CEF_USE_SANDBOX value will be defined
+	// automatically. Pass -DUSE_SANDBOX=OFF to the CMake command-line to disable
+	// use of the sandbox.
 #if !defined(CEF_USE_SANDBOX)
-  settings.no_sandbox = true;
+	  settings.no_sandbox = true;
 #endif
 
-  // SimpleApp implements application-level callbacks for the browser process.
-  // It will create the first browser instance in OnContextInitialized() after
-  // CEF has initialized.
-  CefRefPtr<HeadlessApp> app(new HeadlessApp);
+	  // SimpleApp implements application-level callbacks for the browser process.
+	  // It will create the first browser instance in OnContextInitialized() after
+	  // CEF has initialized.
+	  CefRefPtr<HeadlessApp> app(new HeadlessApp);
 
-  // Initialize CEF for the browser process.
-  CefInitialize(main_args, settings, app.get(), nullptr);
+	  // Initialize CEF for the browser process.
+	  CefInitialize(main_args, settings, app.get(), nullptr);
 
-  // Run the CEF message loop. This will block until CefQuitMessageLoop() is
-  // called.
-  CefRunMessageLoop();
+	  auto mount_fuse_thread = CefThread("mount_fuse_thread");
+	  auto run_fuse_thread = CefThread("run_fuse_thread");
 
-  // Shut down CEF.
-  CefShutdown();
+	  // Run the CEF message loop. This will block until CefQuitMessageLoop() is
+	  // called.
+	  CefRunMessageLoop();
 
-  return 0;
+	  // Shut down CEF.
+	  CefShutdown();
+
+	  return 0;
 }

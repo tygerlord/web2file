@@ -19,18 +19,10 @@ public:
 		return _browser->GetHost();
 	}
 
-	auto get_namefifo() const {
-		return namefifo;
-	}
-
 	void write(const std::string& text);
 
 private:
 	CefRefPtr<CefBrowser> _browser;
-
-	std::string namefifo;
-
-	int output, input;
 
 private:
 	IMPLEMENT_REFCOUNTING(HeadlessBrowser);

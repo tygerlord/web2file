@@ -5,26 +5,34 @@
 #ifndef HEADLESS_APP_H_
 #define HEADLESS_APP_H_
 
+#include <thread>
+
 #include "include/cef_app.h"
+
+#include "headless_fuse.h"
 
 // Implement application-level callbacks for the browser process.
 class HeadlessApp : public CefApp, public CefBrowserProcessHandler {
- public:
-  HeadlessApp();
+public:
+	HeadlessApp();
 
-  // CefApp methods:
-  CefRefPtr<CefBrowserProcessHandler> GetBrowserProcessHandler() override {
-    return this;
-  }
+	// CefApp methods:
+	CefRefPtr<CefBrowserProcessHandler> GetBrowserProcessHandler() override {
+		return this;
+	}
 
-  // CefBrowserProcessHandler methods:
-  void OnContextInitialized() override;
+	// CefBrowserProcessHandler methods:
+	void OnContextInitialized() override;
 
-  CefRefPtr<CefClient> GetDefaultClient() override;
+	CefRefPtr<CefClient> GetDefaultClient() override;
 
- private:
-  // Include the default reference counting implementation.
-  IMPLEMENT_REFCOUNTING(HeadlessApp);
+private:
+	HeadlessFuse _headless_fuse;
+	std::thread _thread_fuse;
+
+private:
+	// Include the default reference counting implementation.
+	IMPLEMENT_REFCOUNTING(HeadlessApp);
 };
 
 #endif  // HEADLESS_APP_H_

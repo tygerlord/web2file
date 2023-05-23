@@ -14,6 +14,7 @@
 #include <list>
 
 #include "headless_browser.h"
+#include "headless_fuse.h"
 
 class HeadlessClient : public CefClient,
                        public CefDisplayHandler,
@@ -97,6 +98,8 @@ private:
 	bool on_visit;
 
 	CefString page_html;
+
+	HeadlessFuse _headless_fuse;
 
 private:
 	// Include the default reference counting implementation.
