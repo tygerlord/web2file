@@ -99,8 +99,6 @@ private:
 
 	CefString page_html;
 
-	HeadlessFuse _headless_fuse;
-
 private:
 	// Include the default reference counting implementation.
 	IMPLEMENT_REFCOUNTING(HeadlessClient);

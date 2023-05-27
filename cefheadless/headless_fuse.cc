@@ -34,11 +34,6 @@
 
 #include "headless_fuse.h"
 
-static struct fuse_args args;
-static struct fuse_session *se;
-static struct fuse_cmdline_opts opts;
-static struct fuse_loop_config config;
-
 static std::queue<std::string> input;
 static std::queue<std::string> output;
 
@@ -239,7 +234,7 @@ static const struct fuse_lowlevel_ops cefheadless_ll_oper = {
 	.removexattr = cefheadless_ll_removexattr,
 };
 
-int fuse_main(int argc, char *argv[])
+int fuse_start(int argc, char *argv[])
 {
 	struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
 	struct fuse_session *se;

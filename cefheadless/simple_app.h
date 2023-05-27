@@ -27,10 +27,6 @@ public:
 	CefRefPtr<CefClient> GetDefaultClient() override;
 
 private:
-	HeadlessFuse _headless_fuse;
-	std::thread _thread_fuse;
-
-private:
 	// Include the default reference counting implementation.
 	IMPLEMENT_REFCOUNTING(HeadlessApp);
 };

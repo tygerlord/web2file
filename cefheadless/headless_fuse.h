@@ -3,26 +3,7 @@
 #ifndef HEADLESS_FUSE_H_
 #define HEADLESS_FUSE_H_
 
-#define FUSE_USE_VERSION 34
-
-#include <fuse_lowlevel.h>
-
-class HeadlessFuse {
-
-public:
-	HeadlessFuse();
-	~HeadlessFuse();
-
-	void start(int argc, char *argv[]);
-	void exit();
-	void close();
-
-private:
-	struct fuse_args args;
-	struct fuse_session *se;
-	struct fuse_cmdline_opts opts;
-	struct fuse_loop_config config;
-};
+int fuse_start(int argc, char *argv[]);
 
 #endif // HEADLESS_FUSE_H_
 	
