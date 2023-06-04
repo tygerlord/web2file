@@ -1,0 +1,8 @@
+seqdiag {
+	CEF; FUSE; VIM;
+
+	CEF -> FUSE [ label = "load url" ];
+	FUSE -> VIM [ label = "read file" ];
+	VIM -> FUSE [ label = "append file" ];
+	FUSE -> CEF [ label = "command"];
+}

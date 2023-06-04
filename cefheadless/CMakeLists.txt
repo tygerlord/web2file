@@ -122,7 +122,7 @@ if(OS_LINUX)
   # Set SUID permissions on the chrome-sandbox target.
   SET_LINUX_SUID_PERMISSIONS("${CEF_TARGET}" "${CEF_TARGET_OUT_DIR}/chrome-sandbox")
 
-  target_compile_options(${CEF_TARGET} PRIVATE -fexceptions)
+  target_compile_options(${CEF_TARGET} PRIVATE -fexceptions -std=c++23)
 endif()
 
 

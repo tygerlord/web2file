@@ -18,8 +18,12 @@
  * \include cefheadless_ll.c
  */
 
-#include <string>
+#include <iostream>
 #include <queue>
+#include <map>
+#include <ranges>
+#include <iomanip>
+#include <string_view>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -29,6 +33,8 @@
 #include <unistd.h>
 #include <assert.h>
 
+#include <sys/mount.h>
+
 #define FUSE_USE_VERSION 34
 #include <fuse_lowlevel.h>
 
@@ -37,22 +43,37 @@
 static std::queue<std::string> input;
 static std::queue<std::string> output;
 
+static const char* mountpoint;
+static struct stat mountpoint_stat;
+static std::map<std::string, std::string> xattr;
+
+static std::function<void(const std::string)> _write_callback;
+
+
 static const char *hello_str = "Hello World!\n";
 static const char *cefheadless_name = "browse.w2f";
 
-static int hello_stat(fuse_ino_t ino, struct stat *stbuf)
+static int headless_stat(fuse_ino_t ino, struct stat *stbuf)
 {
-	stbuf->st_ino = ino;
 	switch (ino) {
 	case 1:
-		stbuf->st_mode = S_IFDIR | 0755;
+		memcpy(stbuf, &mountpoint_stat, sizeof(*stbuf));
+		stbuf->st_ino = ino;
+		//stbuf->st_mode = S_IFDIR | 0777;
 		stbuf->st_nlink = 2;
 		break;
 
 	case 2:
-		stbuf->st_mode = S_IFREG | 0444;
+		stbuf->st_ino = ino;
+		stbuf->st_mode = S_IFREG | 0664;
 		stbuf->st_nlink = 1;
 		stbuf->st_size = strlen(hello_str);
+		stbuf->st_uid = mountpoint_stat.st_uid;
+		stbuf->st_gid = mountpoint_stat.st_gid;
+		stbuf->st_rdev = mountpoint_stat.st_rdev;
+		stbuf->st_atime = mountpoint_stat.st_atime;
+		stbuf->st_mtime = mountpoint_stat.st_mtime;
+		stbuf->st_ctime = mountpoint_stat.st_ctime;
 		break;
 
 	default:
@@ -69,10 +90,10 @@ static void cefheadless_ll_getattr(fuse_req_t req, fuse_ino_t ino,
 	(void) fi;
 
 	memset(&stbuf, 0, sizeof(stbuf));
-	if (hello_stat(ino, &stbuf) == -1)
+	if (headless_stat(ino, &stbuf) == -1)
 		fuse_reply_err(req, ENOENT);
-	else
-		fuse_reply_attr(req, &stbuf, 1.0);
+
+	fuse_reply_attr(req, &stbuf, 1.0);
 }
 
 static void cefheadless_ll_lookup(fuse_req_t req, fuse_ino_t parent, const char *name)
@@ -86,7 +107,7 @@ static void cefheadless_ll_lookup(fuse_req_t req, fuse_ino_t parent, const char 
 		e.ino = 2;
 		e.attr_timeout = 1.0;
 		e.entry_timeout = 1.0;
-		hello_stat(e.ino, &e.attr);
+		headless_stat(e.ino, &e.attr);
 
 		fuse_reply_entry(req, &e);
 	}
@@ -145,12 +166,21 @@ static void cefheadless_ll_readdir(fuse_req_t req, fuse_ino_t ino, size_t size,
 static void cefheadless_ll_open(fuse_req_t req, fuse_ino_t ino,
 			  struct fuse_file_info *fi)
 {
-	if (ino != 2)
+	std::cerr << "open" << " " << ino << "\n";
+
+	if (ino == 1) {
 		fuse_reply_err(req, EISDIR);
-	else if ((fi->flags & O_ACCMODE) != O_RDONLY)
+		return;
+	}
+
+	/*
+	if ((fi->flags & O_ACCMODE) != O_WRONLY) {
 		fuse_reply_err(req, EACCES);
-	else
-		fuse_reply_open(req, fi);
+		return;
+	}
+	*/
+
+	fuse_reply_open(req, fi);
 }
 
 static void cefheadless_ll_read(fuse_req_t req, fuse_ino_t ino, size_t size,
@@ -167,27 +197,38 @@ static void cefheadless_ll_write(fuse_req_t req, fuse_ino_t ino, const char *buf
 {
 	(void) fi;
 
-	assert(ino == 2);
+	//assert(ino == 2);
 
-	fuse_reply_write(req, size);
+	if(ino == 2) {
+		fuse_reply_write(req, size);
 
-	input.emplace(std::string(buf, size));
+		_write_callback(std::string(buf, size));
+	}
+
 }
-
+#if 0
 static void cefheadless_ll_getxattr(fuse_req_t req, fuse_ino_t ino, const char *name,
 							  size_t size)
 {
 	(void)size;
-	assert(ino == 2);
-	if (strcmp(name, "cefheadless_ll_getxattr_name") == 0)
-	{
-		const char *buf = "cefheadless_ll_getxattr_value";
-		fuse_reply_buf(req, buf, strlen(buf));
+	//assert(ino == 2);
+	
+	std::cerr << "getxattr" << " " << ino << " " << name << " " << size << "\n";
+	
+	if(strcmp(name, "security.selinux") == 0) {
+	
 	}
-	else
-	{
-		fuse_reply_err(req, ENOTSUP);
+	
+	if(ino == 2) {
+		if (strcmp(name, "cefheadless_ll_getxattr_name") == 0)
+		{
+			const char *buf = "cefheadless_ll_getxattr_value";
+			fuse_reply_buf(req, buf, strlen(buf));
+		}
 	}
+	
+	//fuse_reply_err(req, ENOTSUP);
+	fuse_reply_err(req, ENODATA);
 }
 
 static void cefheadless_ll_setxattr(fuse_req_t req, fuse_ino_t ino, const char *name,
@@ -221,6 +262,7 @@ static void cefheadless_ll_removexattr(fuse_req_t req, fuse_ino_t ino, const cha
 		fuse_reply_err(req, ENOTSUP);
 	}
 }
+#endif
 
 static const struct fuse_lowlevel_ops cefheadless_ll_oper = {
 	.lookup = cefheadless_ll_lookup,
@@ -229,13 +271,15 @@ static const struct fuse_lowlevel_ops cefheadless_ll_oper = {
 	.read = cefheadless_ll_read,
 	.write = cefheadless_ll_write,
 	.readdir = cefheadless_ll_readdir,
-	.setxattr = cefheadless_ll_setxattr,
-	.getxattr = cefheadless_ll_getxattr,
-	.removexattr = cefheadless_ll_removexattr,
+//	.setxattr = cefheadless_ll_setxattr,
+//	.getxattr = cefheadless_ll_getxattr,
+//	.removexattr = cefheadless_ll_removexattr,
 };
 
-int fuse_start(int argc, char *argv[])
+int fuse_start(int argc, char *argv[], std::function<void(const std::string)> write_callback)
 {
+	_write_callback = write_callback;
+
 	struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
 	struct fuse_session *se;
 	struct fuse_cmdline_opts opts;
@@ -263,6 +307,9 @@ int fuse_start(int argc, char *argv[])
 		ret = 1;
 		goto err_out1;
 	}
+
+	mountpoint = opts.mountpoint;
+	stat(mountpoint, &mountpoint_stat);
 
 	se = fuse_session_new(&args, &cefheadless_ll_oper,
 			      sizeof(cefheadless_ll_oper), NULL);
@@ -296,6 +343,14 @@ err_out1:
 	fuse_opt_free_args(&args);
 
 	return ret ? 1 : 0;
+}
+
+void fuse_stop() {
+	auto rc = umount(mountpoint);
+	
+	if(rc != 0) {
+		throw std::string("Stop fuse error");
+	}
 }
 
 #if 0

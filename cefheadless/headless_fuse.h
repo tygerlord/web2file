@@ -3,7 +3,11 @@
 #ifndef HEADLESS_FUSE_H_
 #define HEADLESS_FUSE_H_
 
-int fuse_start(int argc, char *argv[]);
+#include <string>
+#include <functional>
+
+int fuse_start(int argc, char *argv[], std::function<void(const std::string)> write_callback);
+void fuse_stop();
 
 #endif // HEADLESS_FUSE_H_
 	

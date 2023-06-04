@@ -4,6 +4,7 @@
 
 #include "cefheadless/simple_app.h"
 #include "cefheadless/headless_fuse.h"
+#include "cefheadless/simple_handler.h"
 
 #if defined(CEF_X11)
 #include <X11/Xlib.h>
@@ -38,6 +39,10 @@ int XIOErrorHandlerImpl(Display* display) {
 class StartFuse : public CefTask {
 
 public:
+	StartFuse(CefRefPtr<HeadlessApp> app) {
+		_app = app;
+	}
+
 	void Execute() {
 		int argc = 2;
 		char *argv[argc] = {
@@ -45,13 +50,29 @@ public:
 			const_cast<char*>("_web2file"),
 		};
 
-		LOG(WARNING) << "Start fuse process";
+		LOG(INFO) << "Start fuse process";
 
-		fuse_start(argc, argv);
+		fuse_start(argc, argv, [this](const std::string text){ fuse_write_callback(text); });
 		
-		LOG(WARNING) << "End fuse process";
+		LOG(INFO) << "End fuse process";
 	}
+
 private:
+	void fuse_write_callback(const std::string text) {
+
+		LOG(INFO) << "text = " << text << "\n";
+
+		auto headless_client = HeadlessClient::GetInstance();
+
+		fuse_stop();
+
+		auto force_close = true;
+		headless_client->CloseAllBrowsers(force_close);
+	}
+
+private:
+	CefRefPtr<HeadlessApp> _app;
+
 	// Include the default reference counting implementation.
 	IMPLEMENT_REFCOUNTING(StartFuse);
 
@@ -111,7 +132,7 @@ int main(int argc, char* argv[]) {
 
 	auto task_runner = mount_fuse_thread->GetTaskRunner();
 
-	task_runner->PostTask(new StartFuse());
+	task_runner->PostTask(new StartFuse(app));
 
 	// Run the CEF message loop. This will block until CefQuitMessageLoop() is
 	// called.
