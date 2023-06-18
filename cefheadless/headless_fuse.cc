@@ -40,6 +40,8 @@
 
 #include "headless_fuse.h"
 
+#include "include/base/cef_logging.h"
+
 static std::queue<std::string> input;
 static std::queue<std::string> output;
 
@@ -49,9 +51,10 @@ static std::map<std::string, std::string> xattr;
 
 static std::function<void(const std::string)> _write_callback;
 
+static std::string _file_datas;
 
 static const char *hello_str = "Hello World!\n";
-static const char *cefheadless_name = "browse.w2f";
+static const char *cefheadless_name = "browser1.w2f";
 
 static int headless_stat(fuse_ino_t ino, struct stat *stbuf)
 {
@@ -200,9 +203,9 @@ static void cefheadless_ll_write(fuse_req_t req, fuse_ino_t ino, const char *buf
 	//assert(ino == 2);
 
 	if(ino == 2) {
-		fuse_reply_write(req, size);
-
 		_write_callback(std::string(buf, size));
+
+		fuse_reply_write(req, size);
 	}
 
 }
@@ -346,13 +349,19 @@ err_out1:
 }
 
 void fuse_stop() {
-	auto rc = umount(mountpoint);
+	auto rc = umount2(mountpoint, MNT_FORCE|MNT_DETACH);
 	
+	LOG(INFO) << "umount " << mountpoint << " rc=" << rc << "\n";
+
+
 	if(rc != 0) {
-		throw std::string("Stop fuse error");
+		//throw std::string("Stop fuse error");
 	}
 }
 
+void fuse_write(const std::string& file_datas) {
+	_file_datas = file_datas;
+}
 #if 0
 HeadlessFuse::HeadlessFuse() :
 	se(nullptr) {

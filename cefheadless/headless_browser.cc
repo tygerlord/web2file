@@ -24,8 +24,8 @@ HeadlessBrowser::~HeadlessBrowser() {
 void HeadlessBrowser::write(const std::string& text) {
 
 	//std::cout << text << std::endl;
-	std::cout << "text ici ..." << std::endl;
+	//std::cout << "text ici ..." << std::endl;
+	
+	fuse_write(text);
 }
-
-
 

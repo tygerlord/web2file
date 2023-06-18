@@ -41,14 +41,18 @@ class StartFuse : public CefTask {
 public:
 	StartFuse(CefRefPtr<HeadlessApp> app) {
 		_app = app;
+		headless_client = HeadlessClient::GetInstance();
+	}
+	
+	virtual ~StartFuse() {
 	}
 
 	void Execute() {
-		int argc = 2;
-		char *argv[argc] = {
+		char *argv[2] = {
 			const_cast<char*>("web2file"),
 			const_cast<char*>("_web2file"),
 		};
+		int argc = sizeof(argv) / sizeof(argv[0]);
 
 		LOG(INFO) << "Start fuse process";
 
@@ -60,18 +64,21 @@ public:
 private:
 	void fuse_write_callback(const std::string text) {
 
-		LOG(INFO) << "text = " << text << "\n";
+		LOG(INFO) << "text = '" << text << "'\n";
 
-		auto headless_client = HeadlessClient::GetInstance();
+		if(text.starts_with("quit")) {
+		  LOG(INFO) << "quit mode" << "\n";
+		  
+		  auto force_close = false;
+		  headless_client->CloseAllBrowsers(force_close);
 
-		fuse_stop();
-
-		auto force_close = true;
-		headless_client->CloseAllBrowsers(force_close);
+		  fuse_stop(); 
+		}
 	}
 
 private:
 	CefRefPtr<HeadlessApp> _app;
+	HeadlessClient* headless_client;
 
 	// Include the default reference counting implementation.
 	IMPLEMENT_REFCOUNTING(StartFuse);
@@ -137,6 +144,8 @@ int main(int argc, char* argv[]) {
 	// Run the CEF message loop. This will block until CefQuitMessageLoop() is
 	// called.
 	CefRunMessageLoop();
+
+	fuse_stop();
 
 	mount_fuse_thread->Stop();
 	run_fuse_thread->Stop();

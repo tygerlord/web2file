@@ -199,24 +199,6 @@ void HeadlessClient::CloseAllBrowsers(bool force_close) {
     (*it)->GetHost()->CloseBrowser(force_close);
 }
 
-/*
-void HeadlessClient::VisitDom(bool force_close) {
-  if (!CefCurrentlyOn(TID_UI)) {
-    // Execute on the UI thread.
-    CefPostTask(TID_UI, base::BindOnce(&HeadlessClient::CloseAllBrowsers, this,
-                                       force_close));
-    return;
-  }
-
-  if (browser_list_.empty())
-    return;
-
-  BrowserList::const_iterator it = browser_list_.begin();
-  for (; it != browser_list_.end(); ++it)
-    (*it)->GetHost()->CloseBrowser(force_close);
-}
-*/
-
 // static
 bool HeadlessClient::IsChromeRuntimeEnabled() {
   static int value = -1;

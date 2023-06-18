@@ -1,0 +1,51 @@
+<h1>
+Status of project: POC
+</h1>
+<h1 id="goal">Goal</h1>
+<p>problems:</p>
+<ul>
+<li><p>vim user, I often need to go to the web, which forces me to leave
+the environment to go to the browser.</p></li>
+<li><p>many programs partially integrate vim’s navigation, but this is
+only an imperfect adaptation.</p></li>
+</ul>
+<p>I would therefore like to answer these 2 problems.</p>
+<h1 id="how">How</h1>
+<p>The idea is to make a gateway between the website and vim with <a
+href="https://github.com/libfuse/libfuse">Fuse</a>.</p>
+<figure>
+<img src="readme/web2file.png" alt="diagseq web2file image" />
+<figcaption aria-hidden="true">diagseq web2file image</figcaption>
+</figure>
+<p><code>CEF = headless browser FUSE = file system user space VIM = editor</code></p>
+<p>The <a href="https://bitbucket.org/chromiumembedded/cef/">Chromium
+Embedded Framework</a> (CEF) is a simple framework for embedding
+Chromium-based browsers in other applications. This repository hosts a
+sample project called “cef-project” that can be used as the starting
+point for third-party applications built using CEF.</p>
+<pre><code> _____  ___________          ______ _   _ _____ _____            _    _ ___________  _____ ______ _____ _      _____ 
+/  __ \|  ___|  ___|    _    |  ___| | | /  ___|  ___|  ______  | |  | |  ___| ___ \/ __  \|  ___|_   _| |    |  ___|
+| /  \/| |__ | |_     _| |_  | |_  | | | \ `--.| |__   |______| | |  | | |__ | |_/ /`&#39; / /&#39;| |_    | | | |    | |__  
+| |    |  __||  _|   |_   _| |  _| | | | |`--. \  __|   ______  | |/\| |  __|| ___ \  / /  |  _|   | | | |    |  __| 
+| \__/\| |___| |       |_|   | |   | |_| /\__/ / |___  |______| \  /\  / |___| |_/ /./ /___| |    _| |_| |____| |___ 
+ \____/\____/\_|             \_|    \___/\____/\____/            \/  \/\____/\____/ \_____/\_|    \___/\_____/\____/ </code></pre>
+<h1 id="next-steps">Next Steps</h1>
+<ul>
+<li>Ask for help</li>
+<li>Improve this README</li>
+<li>Improve POC coding</li>
+<li>Extract with js div’s text</li>
+<li>Add command control (quit, append text, move cursor, click …)</li>
+<li>Cut web page on multiple files (?)</li>
+<li>Add javascript plugins to modify the view of the pages according to
+the url</li>
+<li>Add image to explain previous idea</li>
+<li>…</li>
+</ul>
+<h1 id="support-and-contributions">Support and Contributions</h1>
+<p>If you have any questions about CEF or cef-project <a
+href="http://www.magpcss.org/ceforum/">CEF Forum</a>.</p>
+<p>If you would like to make contributions <a
+href="https://liberapay.com/~1772507/donate"><img
+src="https://liberapay.com/assets/widgets/donate.svg"
+alt="Donate using Liberapay" /></a> or participate in the project.</p>
