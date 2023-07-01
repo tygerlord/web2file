@@ -1,6 +1,10 @@
 
 <h1>Status of project: POC</h1>
 
+## change of plans
+
+I am currently studying the possibility of using vim via the browser, ie in web assembly. this option seems interesting to me because of the portability that the use of a web browser gives and on the other hand the ease of displaying web content in the browser, no need to convert to text.
+
 # Goal
 
 problems:
